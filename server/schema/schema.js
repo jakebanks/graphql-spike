@@ -9,6 +9,28 @@ const {
     GraphQLList
 } = graphql;
 
+//TEST DATA
+var applicants = [
+    { id: "1", firstName: "Jake", lastName: "Banks" },
+    { id: "1", firstName: "Jake", lastName: "Banks2" }, //denormalized
+    { id: "2", firstName: "Colin", lastName: "Oh" },
+    { id: "3", firstName: "Simond", lastName: "Lee" },
+    { id: "4", firstName: "Shaun", lastName: "Tirubeni" }
+]
+
+var jobs = [
+    { id: "1", title: "Gizmo Builder", description: "Builder of crazy gizmos" },
+    { id: "2", title: "Widget Tester", description: "Tester of widgets" },
+    { id: "3", title: "Professional Gamer", description: "pwn3r3r 0f n00bz" },
+]
+
+var applications = [
+    { id: "1", jobId: "1", applicantId: "1" },
+    { id: "2", jobId: "2", applicantId: "1" },
+    { id: "3", jobId: "3", applicantId: "1" }
+]
+
+//TYPE DEFINITIONS (SCHEMA)
 const ApplicantType = new GraphQLObjectType({
     name: 'Applicant',
     fields: () => ({
@@ -36,7 +58,8 @@ const JobType = new GraphQLObjectType({
                 return _.filter(applications, {jobId: parent.id});
             }
         },
-        //TODO: i cant jump straight to applicants can i? or is that just a more complex resolve method?
+        //this is a more complex resolve method, because we need to go through a joining table, applications
+        //(my job entity does not refer to applications)
         applicants: {
             type: new GraphQLList(ApplicantType),
             resolve (parent, args) {
@@ -70,15 +93,32 @@ const ApplicationType = new GraphQLObjectType({
     })
 })
 
+//TODO: need a back end DB before I can do this...
+// const Mutation = new GraphQLObjectType({
+//     name: 'Mutation',
+//     fields: {
+//     }
+// })
+
 //ROOT QUERIES
 const RootQuery = new GraphQLObjectType({
     name: 'RootQuery',
     fields: {
         applicant: { //GET /applicants/:id
             type: ApplicantType,
-            args: { id: { type: GraphQLID }},
+            args: { 
+                id: { type: GraphQLID },
+                lastName: { type: GraphQLString }
+            },
             resolve(parent, args) {
-                return _.find(applicants, {id: args.id})
+                const applicantsWithId = _.filter(applicants, {id: args.id});
+                
+                if (args.lastName) { //optional argument
+                    return _.find(applicantsWithId, {lastName: args.lastName});
+                } else {
+                    if (applicantsWithId.size === 1) return applicantsWithId[0];
+                    throw "Multiple applicants found with id 1";
+                }
             }
         },
         applicants: { //GET /applicants
@@ -116,25 +156,6 @@ const RootQuery = new GraphQLObjectType({
         }
     }
 })
-
-//TEST DATA
-var applicants = [
-    { id: "1", firstName: "Jake", lastName: "Banks" },
-    { id: "2", firstName: "Colin", lastName: "Oh" },
-    { id: "3", firstName: "Simond", lastName: "Lee" },
-    { id: "4", firstName: "Shaun", lastName: "Tirubeni" }
-]
-
-var jobs = [
-    { id: "1", title: "Gizmo Builder", description: "Builder of crazy gizmos" },
-    { id: "2", title: "Widget Tester", description: "Tester of widgets" }
-]
-
-var applications = [
-    { id: "1", jobId: "1", applicantId: "1" },
-    { id: "2", jobId: "2", applicantId: "1" },
-    { id: "3", jobId: "3", applicantId: "1" }
-]
 
 module.exports = new GraphQLSchema({
     query: RootQuery
