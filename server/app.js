@@ -1,10 +1,11 @@
 const express = require('express');
 const graphqlHTTP = require('express-graphql'); //allows express to access the graphql api, kind of like middleware
 const schema = require('./schema/schema');
+const cors = require('cors');
 
 const app = express();
 
-
+app.use(cors());
 
 app.use('/graphql', graphqlHTTP({
     schema: schema, //pass the schema to the middleware
